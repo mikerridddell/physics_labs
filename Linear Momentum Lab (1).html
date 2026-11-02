@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Conservation of Linear Momentum Lab</title>
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --card-bg: #1e293b;
+      --card-border: #334155;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent-block-a: #38bdf8;
+      --accent-block-b: #f43f5e;
+      --accent-primary: #6366f1;
+      --accent-primary-hover: #4f46e5;
+      --success: #10b981;
+      --warning: #f59e0b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 1.5rem;
+      gap: 1.5rem;
+    }
+
+    header {
+      text-align: center;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    header h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      margin-bottom: 0.5rem;
+      color: #fff;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .main-container {
+      max-width: 1100px;
+      margin: 0 auto;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* Simulation Canvas Container */
+    .canvas-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 1rem;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    }
+
+    .canvas-wrapper {
+      position: relative;
+      width: 100%;
+      height: 320px;
+      background: #090d16;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .offscreen-banner {
+      position: absolute;
+      top: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(244, 63, 94, 0.95);
+      color: #fff;
+      padding: 0.5rem 1.25rem;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      display: none;
+      align-items: center;
+      gap: 0.5rem;
+      z-index: 10;
+      animation: fadeIn 0.2s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translate(-50%, -10px); }
+      to { opacity: 1; transform: translate(-50%, 0); }
+    }
+
+    /* Primary Controls & Telemetry Layout */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .card-title-a { color: var(--accent-block-a); }
+    .card-title-b { color: var(--accent-block-b); }
+    .card-title-env { color: #a855f7; }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .control-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+
+    .control-label span.val {
+      color: var(--text-main);
+      font-weight: 600;
+      font-family: monospace;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 6px;
+      background: #334155;
+      border-radius: 3px;
+      outline: none;
+      accent-color: var(--accent-primary);
+      cursor: pointer;
+    }
+
+    input[type="range"].slider-a { accent-color: var(--accent-block-a); }
+    input[type="range"].slider-b { accent-color: var(--accent-block-b); }
+    input[type="range"].slider-env { accent-color: #a855f7; }
+
+    /* Telemetry Display Boxes */
+    .telemetry-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      margin-top: 0.25rem;
+    }
+
+    .telemetry-box {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      padding: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .telemetry-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .telemetry-value {
+      font-size: 1.1rem;
+      font-weight: 700;
+      font-family: monospace;
+    }
+
+    /* Simulation Control Buttons Bar */
+    .action-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: center;
+      justify-content: center;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 1rem;
+    }
+
+    .btn {
+      padding: 0.6rem 1.25rem;
+      border-radius: 8px;
+      border: none;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: all 0.15s ease;
+    }
+
+    .btn-primary {
+      background: var(--accent-primary);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-primary-hover);
+    }
+
+    .btn-secondary {
+      background: #334155;
+      color: var(--text-main);
+    }
+
+    .btn-secondary:hover {
+      background: #475569;
+    }
+
+    .toggle-group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-left: auto;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+
+    .toggle-group input {
+      accent-color: var(--accent-primary);
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Conservation of Linear Momentum Lab</h1>
+    <p>Investigate 1D elastic and inelastic collisions between two interactive sliding blocks.</p>
+  </header>
+
+  <main class="main-container">
+    <!-- Visual Canvas Card -->
+    <div class="canvas-card">
+      <div class="offscreen-banner" id="offscreenBanner">
+        ⚠️ Object exited bounds — Simulation paused
+      </div>
+      <div class="canvas-wrapper">
+        <canvas id="simCanvas"></canvas>
+      </div>
+    </div>
+
+    <!-- Interactive Simulation Controls -->
+    <div class="action-bar">
+      <button class="btn btn-primary" id="btnPlayPause">▶ Start</button>
+      <button class="btn btn-secondary" id="btnStep">⏭ Single Step</button>
+      <button class="btn btn-secondary" id="btnReset">↺ Reset</button>
+
+      <div class="toggle-group">
+        <input type="checkbox" id="toggleVectors" checked>
+        <label for="toggleVectors">Show Velocity Vectors</label>
+      </div>
+    </div>
+
+    <!-- Parameter Controls & Individual Telemetry Grid -->
+    <div class="dashboard-grid">
+      <!-- Block A Controls -->
+      <div class="card">
+        <div class="card-title card-title-a">
+          <span>■</span> Block A Parameters
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">
+            <span>Mass (m₁)</span>
+            <span class="val" id="valMassA">2.0 kg</span>
+          </div>
+          <input type="range" id="sliderMassA" class="slider-a" min="1.0" max="5.0" step="0.1" value="2.0">
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">
+            <span>Initial Velocity (u₁)</span>
+            <span class="val" id="valVelA">+3.000 m/s</span>
+          </div>
+          <input type="range" id="sliderVelA" class="slider-a" min="-10.000" max="10.000" step="0.1" value="3.000">
+        </div>
+
+        <div class="telemetry-row">
+          <div class="telemetry-box">
+            <span class="telemetry-label">Initial Velocity</span>
+            <span class="telemetry-value" id="dispInitVelA" style="color: var(--accent-block-a);">+3.000 m/s</span>
+          </div>
+          <div class="telemetry-box">
+            <span class="telemetry-label">Final Velocity</span>
+            <span class="telemetry-value" id="dispFinalVelA" style="color: var(--accent-block-a);">+3.000 m/s</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Block B Controls -->
+      <div class="card">
+        <div class="card-title card-title-b">
+          <span>■</span> Block B Parameters
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">
+            <span>Mass (m₂)</span>
+            <span class="val" id="valMassB">2.0 kg</span>
+          </div>
+          <input type="range" id="sliderMassB" class="slider-b" min="1.0" max="5.0" step="0.1" value="2.0">
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">
+            <span>Initial Velocity (u₂)</span>
+            <span class="val" id="valVelB">-3.000 m/s</span>
+          </div>
+          <input type="range" id="sliderVelB" class="slider-b" min="-10.000" max="10.000" step="0.1" value="-3.000">
+        </div>
+
+        <div class="telemetry-row">
+          <div class="telemetry-box">
+            <span class="telemetry-label">Initial Velocity</span>
+            <span class="telemetry-value" id="dispInitVelB" style="color: var(--accent-block-b);">-3.000 m/s</span>
+          </div>
+          <div class="telemetry-box">
+            <span class="telemetry-label">Final Velocity</span>
+            <span class="telemetry-value" id="dispFinalVelB" style="color: var(--accent-block-b);">-3.000 m/s</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Environment & Collision Controls -->
+      <div class="card">
+        <div class="card-title card-title-env">
+          <span>⚙</span> Collision Environment
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">
+            <span>Elasticity Coefficient (e)</span>
+            <span class="val" id="valElasticity">1.00</span>
+          </div>
+          <input type="range" id="sliderElasticity" class="slider-env" min="0.00" max="1.00" step="0.01" value="1.00">
+          <span style="font-size:0.75rem; color:var(--text-muted); margin-top:0.1rem;">
+            0.00 = Inelastic (stick together) | 1.00 = Elastic
+          </span>
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">
+            <span>Simulator Speed</span>
+            <span class="val" id="valSimSpeed">1.0x</span>
+          </div>
+          <input type="range" id="sliderSimSpeed" class="slider-env" min="0.1" max="1.0" step="0.1" value="1.0">
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      // DOM Reference Cache
+      const canvas = document.getElementById('simCanvas');
+      const ctx = canvas.getContext('2d');
+      const offscreenBanner = document.getElementById('offscreenBanner');
+
+      const sliderMassA = document.getElementById('sliderMassA');
+      const sliderVelA = document.getElementById('sliderVelA');
+      const sliderMassB = document.getElementById('sliderMassB');
+      const sliderVelB = document.getElementById('sliderVelB');
+      const sliderElasticity = document.getElementById('sliderElasticity');
+      const sliderSimSpeed = document.getElementById('sliderSimSpeed');
+
+      const valMassA = document.getElementById('valMassA');
+      const valVelA = document.getElementById('valVelA');
+      const valMassB = document.getElementById('valMassB');
+      const valVelB = document.getElementById('valVelB');
+      const valElasticity = document.getElementById('valElasticity');
+      const valSimSpeed = document.getElementById('valSimSpeed');
+
+      const dispInitVelA = document.getElementById('dispInitVelA');
+      const dispFinalVelA = document.getElementById('dispFinalVelA');
+      const dispInitVelB = document.getElementById('dispInitVelB');
+      const dispFinalVelB = document.getElementById('dispFinalVelB');
+
+      const btnPlayPause = document.getElementById('btnPlayPause');
+      const btnStep = document.getElementById('btnStep');
+      const btnReset = document.getElementById('btnReset');
+      const toggleVectors = document.getElementById('toggleVectors');
+
+      // Physical World Setup (-10m to +10m)
+      const WORLD_BOUND_LEFT = -10.0;
+      const WORLD_BOUND_RIGHT = 10.0;
+      const BLOCK_WIDTH_METERS = 1.6;
+      const BLOCK_HEIGHT_METERS = 1.2;
+
+      let isRunning = false;
+      let hasCollided = false;
+      let animFrameId = null;
+      let lastTimestamp = 0;
+
+      // State Object
+      const state = {
+        m1: parseFloat(sliderMassA.value),
+        v1: parseFloat(sliderVelA.value),
+        v1_current: parseFloat(sliderVelA.value),
+        x1: -5.0,
+
+        m2: parseFloat(sliderMassB.value),
+        v2: parseFloat(sliderVelB.value),
+        v2_current: parseFloat(sliderVelB.value),
+        x2: 5.0,
+
+        e: parseFloat(sliderElasticity.value),
+        simSpeed: parseFloat(sliderSimSpeed.value),
+        showVectors: toggleVectors.checked
+      };
+
+      // Exact Physics Calculations
+      function calculateTheoreticalFinals() {
+        const m1 = state.m1;
+        const m2 = state.m2;
+        const u1 = state.v1;
+        const u2 = state.v2;
+        const e = state.e;
+
+        const v1_final = (m1 * u1 + m2 * u2 - m2 * e * (u1 - u2)) / (m1 + m2);
+        const v2_final = (m1 * u1 + m2 * u2 + m1 * e * (u1 - u2)) / (m1 + m2);
+
+        return { v1_final, v2_final };
+      }
+
+      function formatVel(val) {
+        const num = parseFloat(val);
+        const sign = num > 0 ? '+' : (num === 0 ? ' ' : '');
+        return sign + num.toFixed(3) + ' m/s';
+      }
+
+      function formatMass(val) {
+        return parseFloat(val).toFixed(1) + ' kg';
+      }
+
+      function updateUIElements() {
+        valMassA.textContent = formatMass(state.m1);
+        valVelA.textContent = formatVel(state.v1);
+        valMassB.textContent = formatMass(state.m2);
+        valVelB.textContent = formatVel(state.v2);
+        valElasticity.textContent = state.e.toFixed(2);
+        valSimSpeed.textContent = state.simSpeed.toFixed(1) + 'x';
+
+        dispInitVelA.textContent = formatVel(state.v1);
+        dispInitVelB.textContent = formatVel(state.v2);
+
+        dispFinalVelA.textContent = formatVel(state.v1_current);
+        dispFinalVelB.textContent = formatVel(state.v2_current);
+      }
+
+      function handleCanvasResize() {
+        const rect = canvas.parentElement.getBoundingClientRect();
+        canvas.width = rect.width * window.devicePixelRatio;
+        canvas.height = rect.height * window.devicePixelRatio;
+        renderCanvas();
+      }
+
+      function worldToScreenX(worldX) {
+        const padding = 40 * window.devicePixelRatio;
+        const usableWidth = canvas.width - 2 * padding;
+        const ratio = (worldX - WORLD_BOUND_LEFT) / (WORLD_BOUND_RIGHT - WORLD_BOUND_LEFT);
+        return padding + ratio * usableWidth;
+      }
+
+      function meterToPixelScale() {
+        const padding = 40 * window.devicePixelRatio;
+        const usableWidth = canvas.width - 2 * padding;
+        return usableWidth / (WORLD_BOUND_RIGHT - WORLD_BOUND_LEFT);
+      }
+
+      function checkCollision() {
+        if (hasCollided) return;
+
+        const halfW = BLOCK_WIDTH_METERS / 2;
+        const distance = state.x2 - state.x1;
+
+        if (distance <= BLOCK_WIDTH_METERS) {
+          // Collision detected
+          hasCollided = true;
+
+          // Correct positions to prevent overlapping
+          const overlap = BLOCK_WIDTH_METERS - distance;
+          state.x1 -= overlap / 2;
+          state.x2 += overlap / 2;
+
+          // Execute exact 1D collision formula
+          const finals = calculateTheoreticalFinals();
+          state.v1_current = finals.v1_final;
+          state.v2_current = finals.v2_final;
+
+          updateUIElements();
+        }
+      }
+
+      function checkBoundaries() {
+        const halfW = BLOCK_WIDTH_METERS / 2;
+        const leftEdgeA = state.x1 - halfW;
+        const rightEdgeA = state.x1 + halfW;
+        const leftEdgeB = state.x2 - halfW;
+        const rightEdgeB = state.x2 + halfW;
+
+        if (leftEdgeA <= WORLD_BOUND_LEFT || rightEdgeA >= WORLD_BOUND_RIGHT ||
+            leftEdgeB <= WORLD_BOUND_LEFT || rightEdgeB >= WORLD_BOUND_RIGHT) {
+          
+          isRunning = false;
+          btnPlayPause.textContent = '▶ Resume';
+          offscreenBanner.style.display = 'flex';
+          return true;
+        }
+        return false;
+      }
+
+      function stepPhysics(dt) {
+        const scaledDt = dt * state.simSpeed;
+
+        state.x1 += state.v1_current * scaledDt;
+        state.x2 += state.v2_current * scaledDt;
+
+        checkCollision();
+        checkBoundaries();
+        updateUIElements();
+      }
+
+      function drawVectorArrow(screenX, screenY, velocity, color) {
+        if (!state.showVectors || Math.abs(velocity) < 0.001) return;
+
+        const scale = meterToPixelScale() * 0.35;
+        const arrowLength = velocity * scale;
+        const targetX = screenX + arrowLength;
+
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        ctx.lineWidth = 3 * window.devicePixelRatio;
+
+        ctx.beginPath();
+        ctx.moveTo(screenX, screenY);
+        ctx.lineTo(targetX, screenY);
+        ctx.stroke();
+
+        // Arrowhead
+        const headSize = 8 * window.devicePixelRatio;
+        const dir = velocity > 0 ? 1 : -1;
+        ctx.beginPath();
+        ctx.moveTo(targetX, screenY);
+        ctx.lineTo(targetX - dir * headSize, screenY - headSize / 1.5);
+        ctx.lineTo(targetX - dir * headSize, screenY + headSize / 1.5);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      function renderCanvas() {
+        const w = canvas.width;
+        const h = canvas.height;
+        const scale = meterToPixelScale();
+
+        ctx.clearRect(0, 0, w, h);
+
+        // Ground Track
+        const groundY = h * 0.72;
+        ctx.strokeStyle = '#334155';
+        ctx.lineWidth = 3 * window.devicePixelRatio;
+        ctx.beginPath();
+        ctx.moveTo(0, groundY);
+        ctx.lineTo(w, groundY);
+        ctx.stroke();
+
+        // Grid Rulers
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 1 * window.devicePixelRatio;
+        ctx.fillStyle = '#64748b';
+        ctx.font = `${11 * window.devicePixelRatio}px monospace`;
+        ctx.textAlign = 'center';
+
+        for (let x = WORLD_BOUND_LEFT; x <= WORLD_BOUND_RIGHT; x += 2) {
+          const sx = worldToScreenX(x);
+          ctx.beginPath();
+          ctx.moveTo(sx, groundY);
+          ctx.lineTo(sx, groundY + 8 * window.devicePixelRatio);
+          ctx.stroke();
+          ctx.fillText(`${x > 0 ? '+' : ''}${x}m`, sx, groundY + 22 * window.devicePixelRatio);
+        }
+
+        // Draw Block A
+        const bw = BLOCK_WIDTH_METERS * scale;
+        const bh = BLOCK_HEIGHT_METERS * scale;
+
+        const sx1 = worldToScreenX(state.x1);
+        const sy1 = groundY - bh;
+
+        ctx.fillStyle = '#38bdf8';
+        ctx.shadowColor = 'rgba(56, 189, 248, 0.4)';
+        ctx.shadowBlur = 12 * window.devicePixelRatio;
+        ctx.fillRect(sx1 - bw / 2, sy1, bw, bh);
+        ctx.shadowBlur = 0;
+
+        ctx.fillStyle = '#0f172a';
+        ctx.font = `bold ${14 * window.devicePixelRatio}px sans-serif`;
+        ctx.fillText('A', sx1, sy1 + bh / 2 + 5 * window.devicePixelRatio);
+
+        // Draw Block B
+        const sx2 = worldToScreenX(state.x2);
+        const sy2 = groundY - bh;
+
+        ctx.fillStyle = '#f43f5e';
+        ctx.shadowColor = 'rgba(244, 63, 94, 0.4)';
+        ctx.shadowBlur = 12 * window.devicePixelRatio;
+        ctx.fillRect(sx2 - bw / 2, sy2, bw, bh);
+        ctx.shadowBlur = 0;
+
+        ctx.fillStyle = '#0f172a';
+        ctx.font = `bold ${14 * window.devicePixelRatio}px sans-serif`;
+        ctx.fillText('B', sx2, sy2 + bh / 2 + 5 * window.devicePixelRatio);
+
+        // Draw Velocity Arrows
+        drawVectorArrow(sx1, sy1 - 15 * window.devicePixelRatio, state.v1_current, '#38bdf8');
+        drawVectorArrow(sx2, sy2 - 15 * window.devicePixelRatio, state.v2_current, '#f43f5e');
+
+        // Draw On-Canvas Telemetry Badges
+        ctx.font = `${11 * window.devicePixelRatio}px monospace`;
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillText(formatVel(state.v1_current), sx1, sy1 - 32 * window.devicePixelRatio);
+
+        ctx.fillStyle = '#f43f5e';
+        ctx.fillText(formatVel(state.v2_current), sx2, sy2 - 32 * window.devicePixelRatio);
+      }
+
+      function gameLoop(timestamp) {
+        if (!lastTimestamp) lastTimestamp = timestamp;
+        const dt = Math.min((timestamp - lastTimestamp) / 1000, 0.033);
+        lastTimestamp = timestamp;
+
+        if (isRunning) {
+          stepPhysics(dt);
+        }
+
+        renderCanvas();
+
+        if (isRunning) {
+          animFrameId = requestAnimationFrame(gameLoop);
+        }
+      }
+
+      function resetSimulation() {
+        isRunning = false;
+        hasCollided = false;
+        offscreenBanner.style.display = 'none';
+
+        state.m1 = parseFloat(sliderMassA.value);
+        state.v1 = parseFloat(sliderVelA.value);
+        state.v1_current = state.v1;
+        state.x1 = -5.0;
+
+        state.m2 = parseFloat(sliderMassB.value);
+        state.v2 = parseFloat(sliderVelB.value);
+        state.v2_current = state.v2;
+        state.x2 = 5.0;
+
+        state.e = parseFloat(sliderElasticity.value);
+        state.simSpeed = parseFloat(sliderSimSpeed.value);
+
+        btnPlayPause.textContent = '▶ Start';
+        updateUIElements();
+        renderCanvas();
+      }
+
+      // Event Listeners
+      sliderMassA.addEventListener('input', (e) => {
+        state.m1 = parseFloat(e.target.value);
+        updateUIElements();
+      });
+
+      sliderVelA.addEventListener('input', (e) => {
+        state.v1 = parseFloat(e.target.value);
+        if (!hasCollided) state.v1_current = state.v1;
+        updateUIElements();
+        renderCanvas();
+      });
+
+      sliderMassB.addEventListener('input', (e) => {
+        state.m2 = parseFloat(e.target.value);
+        updateUIElements();
+      });
+
+      sliderVelB.addEventListener('input', (e) => {
+        state.v2 = parseFloat(e.target.value);
+        if (!hasCollided) state.v2_current = state.v2;
+        updateUIElements();
+        renderCanvas();
+      });
+
+      sliderElasticity.addEventListener('input', (e) => {
+        state.e = parseFloat(e.target.value);
+        updateUIElements();
+      });
+
+      sliderSimSpeed.addEventListener('input', (e) => {
+        state.simSpeed = parseFloat(e.target.value);
+        updateUIElements();
+      });
+
+      toggleVectors.addEventListener('change', (e) => {
+        state.showVectors = e.target.checked;
+        renderCanvas();
+      });
+
+      btnPlayPause.addEventListener('click', () => {
+        isRunning = !isRunning;
+        if (isRunning) {
+          btnPlayPause.textContent = '⏸ Pause';
+          lastTimestamp = 0;
+          animFrameId = requestAnimationFrame(gameLoop);
+        } else {
+          btnPlayPause.textContent = '▶ Start';
+        }
+      });
+
+      btnStep.addEventListener('click', () => {
+        if (!isRunning) {
+          stepPhysics(0.016);
+          renderCanvas();
+        }
+      });
+
+      btnReset.addEventListener('click', resetSimulation);
+      window.addEventListener('resize', handleCanvasResize);
+
+      // Initial Setup
+      handleCanvasResize();
+      resetSimulation();
+    });
+  </script>
+</body>
+</html>
